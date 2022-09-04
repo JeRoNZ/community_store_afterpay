@@ -15,11 +15,11 @@ use Concrete\Core\Package\PackageService;
 use Concrete\Core\Support\Facade\Application;
 use Concrete\Core\Support\Facade\Session;
 use Concrete\Package\CommunityStore\Src\CommunityStore\Customer\Customer as StoreCustomer;
+use Concrete\Package\CommunityStore\Src\CommunityStore\Group\GroupList as StoreGroupList;
 use Concrete\Package\CommunityStore\Src\CommunityStore\Order\Order;
-use Concrete\Package\CommunityStore\Src\CommunityStore\Utilities\Price as StorePrice;
+use Concrete\Package\CommunityStore\Src\CommunityStore\Order\OrderItem;
 use Core;
 use GuzzleHttp\Client;
-use IPLib\Address\AddressInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use URL;
 use Config;
@@ -39,8 +39,11 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		$error = new ErrorList();
 		if ($status !== 'SUCCESS') {
 			$error->add(t('Your payment was declined'));
+			$this->log(t('Payment for token %s with status %s', $orderToken, $status));
 		} else {
 			if (!$orderToken) { // Just get out if there's no token
+				$this->log(t('afterpayConfirm: No order token present, bailing out'), true);
+
 				return new RedirectResponse('/');
 			}
 
@@ -48,7 +51,12 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			// Immediate payment flow
 			// https://developers.afterpay.com/afterpay-online/reference/capture-full-payment
 			try {
-				$response = $client->request('POST', $this->getURL() . '/v2/payments/capture', [
+				$endpoint = '/v2/payments/capture';
+				if (Config::get('community_store_afterpay.PaymentFlow') === 1) {
+					$endpoint = '/v2/payments/auth';
+				}
+				$this->log(t('Initiating payment for token %s using %s', $orderToken, $endpoint));
+				$response = $client->request('POST', $this->getURL() . $endpoint, [
 					'headers' => $this->getHeaders(),
 					'body' => json_encode(['token' => $orderToken])
 				]);
@@ -61,17 +69,20 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 						/** @var Order $order */
 						$order = Order::getByID($orderID);
 						if ($order) {
+							$this->log(t('Completing payment for order %s paymentID %s', $orderID, $payment->id));
 							$order->completeOrder($payment->id);
 
 							return new RedirectResponse($this->getLangPath() . '/checkout/complete');
 						}
 					}
 					$error->add(t('Could not find your order'));
+					$this->log(t('Could not get order for token %s, orderID %s, response %s', $orderToken, $payment->merchantReference, $json), true);
 				} else {
 					$error->add(t('Your payment was declined'));
+					$this->log(t('Payment for token %s was declined', $orderToken));
 				}
 			} catch (\Exception $e) {
-				$this->log($e->getMessage(), true);
+				$this->log(t('Unable to process payment: ').$e->getMessage(), true);
 				$error->add(t('Unable to process payment'));
 			}
 		}
@@ -83,53 +94,63 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 
 
 	public function afterpayCancel () {
+		$orderToken = $this->request->get('orderToken');
+		$this->log(t('afterpayCancel for token %s', $orderToken));
+
 		$this->flash('message', t('Your payment was cancelled'));
 
 		return new RedirectResponse($this->getLangPath() . '/checkout');
 	}
 
-	private function getLangPath () {
-		$referrer = $this->request->server->get('HTTP_REFERER');;
-		$c = \Page::getByPath(parse_url($referrer, PHP_URL_PATH));
-		$al = Section::getBySectionOfSite($c);
-		$langpath = '';
-		if ($al !== null) {
-			$langpath = $al->getCollectionHandle();
-		}
-
-		return $langpath;
-	}
 
 	public function createSession () {
-		$referrer = $this->request->server->get('HTTP_REFERER');;
-		$c = \Page::getByPath(parse_url($referrer, PHP_URL_PATH));
-		$al = Section::getBySectionOfSite($c);
-		$langpath = '';
-		if ($al !== null) {
-			$langpath = $al->getCollectionHandle();
-		}
-
 		// fetch order just submitted
 		/** @var Order $order */
 		$order = StoreOrder::getByID(Session::get('orderID'));
-		$currency = Config::get('community_store_stripe_checkout.currency'); // TODO
-		$this->set('currency', $currency);
-
-//		$currencyMultiplier = StorePrice::getCurrencyMultiplier($currency);
-		$currencyMultiplier = 1;
+		$currency = Config::get('community_store_afterpay.currency');
 
 		if ($order) {
 			$goodsTotal = 0;
+			$orderItems = [];
+			/** @var OrderItem[] $items */
 			$items = $order->getOrderItems();
 			if ($items) {
 				foreach ($items as $item) {
-					$goodsTotal += round($item->getPricePaid() * $currencyMultiplier, 0) * $item->getQty();
+					$goodsTotal += round($item->getPricePaid(), 2) * $item->getQuantity();
+					$imagesrc = '';
+					$fileObj = $item->getProductObject()->getImageObj();
+					if (is_object($fileObj)) {
+						$imagesrc = $fileObj->getURL();
+					}
+
+					$optionOutput = [$item->getProductName()];
+					$options = $item->getProductOptions();
+					if ($options) {
+						$optionOutput = [];
+						foreach ($options as $option) {
+							if ($option['oioValue']) {
+								$optionOutput[] = $option['oioKey'] . ": " . $option['oioValue'];
+							}
+						}
+					}
+					$optionText = implode(' ', $optionOutput);
+
+					$orderItems[] = [
+						'name' => substr($optionText, 0, 255),
+						'sku' => substr($item->getSKU(), 0, 128),
+						'quantity' => (int) $item->getQuantity(),
+						'imageUrl' => substr($imagesrc, 0, 2048),
+						'price' => [
+							'amount' => number_format(round($item->getPricePaid(), 2), 2, '.', ''),
+							'currency' => $currency
+						]
+					];
 				}
 			}
 
 			$shippingAmount = 0;
 			if ($order->isShippable()) {
-				$shippingAmount = round($order->getShippingTotal() * $currencyMultiplier, 0);
+				$shippingAmount = round($order->getShippingTotal(), 2);
 			}
 
 			$taxes = $order->getTaxes();
@@ -138,7 +159,9 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			if (!empty($taxes)) {
 				foreach ($order->getTaxes() as $tax) {
 					if ($tax['amount']) {
-						$taxAmount += round($tax['amount'] * $currencyMultiplier, 0);
+						$taxAmount += round($tax['amount'], 2);
+					} elseif ($tax['amountIncluded']) {
+						$taxAmount += round($tax['amountIncluded'], 2);
 					}
 				}
 			}
@@ -146,41 +169,50 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			$customer = new StoreCustomer();
 
 			$shipping = [
-				'name' => $customer->getValue('shipping_first_name'),
-				'line1' => $customer->getValue('shipping_address')->address1,
-				'postcode' => $customer->getValue('shipping_address')->postal_code,
+				'name' => substr($customer->getValue('shipping_first_name') . ' ' . $customer->getValue('shipping_last_name'), 0, 255),
+				'line1' => substr($customer->getValue('shipping_address')->address1, 0, 128),
+				'line2' => substr($customer->getValue('shipping_address')->address2, 0, 128),
+				'area1' => substr($customer->getValue('shipping_address')->city, 0, 128),
+				'region' => substr($customer->getValue('shipping_address')->state_province, 0, 128),
+				'postcode' => substr($customer->getValue('shipping_address')->postal_code, 0, 128)
 			];
 
 			$billing = [
-				'name' => $customer->getValue('billing_first_name'),
-				'line1' => $customer->getValue('billing_address')->address1,
-				'postcode' => $customer->getValue('billing_address')->postal_code,
+				'name' => substr($customer->getValue('billing_first_name') . ' ' . $customer->getValue('billing_last_name'), 0, 255),
+				'line1' => substr($customer->getValue('billing_address')->address1, 0, 128),
+				'line2' => substr($customer->getValue('billing_address')->address2, 0, 128),
+				'area1' => substr($customer->getValue('billing_address')->city, 0, 128),
+				'region' => substr($customer->getValue('billing_address')->state_province, 0, 128),
+				'postcode' => substr($customer->getValue('billing_address')->postal_code, 0, 128)
 			];
 
 			$merchant = [
-				'redirectConfirmUrl' => (string) \URL::to($langpath . '/checkout/afterpayconfirm'),
-				'redirectCancelUrl' => (string) \URL::to($langpath . '/checkout/afterpaycancel'),
-				'popupOrginUrl' => (string) \URL::to($langpath . '/cart')
+				'redirectConfirmUrl' => (string) \URL::to('/checkout/afterpayconfirm'),
+				'redirectCancelUrl' => (string) \URL::to('/checkout/afterpaycancel'),
+				'popupOrginUrl' => (string) \URL::to($this->getLangPath() . '/cart')
 			];
 
 			$consumer = [
-				'givenNames' => $customer->getValue('billing_first_name'),
-				'surname' => $customer->getValue('billing_last_name'),
-				'email' => $customer->getEmail()
+				'phoneNumber' => substr($customer->getValue('billing_phone'), 0, 32),
+				'givenNames' => substr($customer->getValue('billing_first_name'), 0, 128),
+				'surname' => substr($customer->getValue('billing_last_name'), 0, 128),
+				'email' => substr($customer->getEmail(), 0, 128),
 			];
 
 			$data = [
-				'amount' => ['amount' => $goodsTotal, 'currency' => $currency],
+				'items' => $orderItems,
+				'amount' => ['amount' => number_format($goodsTotal, 2, '.', ''), 'currency' => $currency],
 				'consumer' => $consumer,
 				'billing' => $billing,
 				'shipping' => $shipping,
 				'merchant' => $merchant,
 				'merchantReference' => 'WEB' . sprintf('%06d', $order->getOrderID()),
-				'taxAmount' => ['amount' => $taxAmount, 'currency' => $currency],
-				'shippingAmount' => ['amount' => $shippingAmount, 'currency' => $currency],
+				'taxAmount' => ['amount' => number_format($taxAmount, 2, '.', ''), 'currency' => $currency],
+				'shippingAmount' => ['amount' => number_format($shippingAmount, 2, '.', ''), 'currency' => $currency],
 			];
 
 			$body = json_encode($data);
+			$this->log(t('Requesting afterpay token with payload %s', $body));
 
 			$client = new Client();
 			try {
@@ -194,13 +226,21 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 				$token = $payload->token;
 
 				return new Response($token, 200);
+
 			} catch (\Exception $e) {
 				$this->log($e->getMessage(), true);
 
-				return new Response(t('An error occurred initiating your payment. Please try another payment method'), 500);
+				$error = new ErrorList();
+				$error->add(t('An error occurred initiating your payment. Please try another payment method'));
+				$this->flash('error', $error);
+
+				return new Response(t("An error occurred initiating your payment.\nPlease try another payment method"), 500);
 			}
 		}
 
+		$error = new ErrorList();
+		$error->add('Error - no order found');
+		$this->flash('error', $error);
 		return new Response(t('Error - no order found'), 401);
 	}
 
@@ -223,25 +263,20 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		$this->set('MaxAttempts', Config::get('community_store_afterpay.MaxAttempts'));
 		$this->set('Debug', Config::get('community_store_afterpay.Debug'));
 		$this->set('MerchantCountry', Config::get('community_store_afterpay.MerchantCountry'));
+		$this->set('PaymentFlow', Config::get('community_store_afterpay.PaymentFlow'));
 
+		$grouplist = StoreGroupList::getGroupList();
+		$this->set('grouplist', $grouplist);
+		foreach ($grouplist as $productgroup) {
+			$productgroups[$productgroup->getGroupID()] = $productgroup->getGroupName();
+		}
+		$this->set('productgroups', $productgroups);
+		$this->set('pgroups', Config::get('community_store_afterpay.ExcludedGroups') ?: []);
+		$this->requireAsset('css', 'select2');
+		$this->requireAsset('javascript', 'select2');
 
-		$currencies = array(
-//			'AUD' => 'Australian Dollar',
-			'NZD' => 'New Zealand Dollar',
-		);
-		$this->set('currencies', $currencies);
 		$app = Application::getFacadeApplication();
 		$this->set('form', $app->make('helper/form'));
-	}
-
-
-	public function getName () {
-		return 'Afterpay';
-	}
-
-
-	public function isExternal () {
-		return true;
 	}
 
 
@@ -256,11 +291,37 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		Config::save('community_store_afterpay.SandboxMode', ($data['afterpaySandboxMode'] ? 1 : 0));
 		Config::save('community_store_afterpay.MaxAttempts', ($data['afterpayMaxAttempts'] ? (int) $data['afterpayMaxAttempts'] : 20));
 		Config::save('community_store_afterpay.MerchantCountry', ($data['afterpayMerchantCountry'] ?: 'auto'));
-// TODO excluded product groups....
+		Config::save('community_store_afterpay.PaymentFlow', ($data['afterpayPaymentFlow'] ? 1 : 0));
+
+		$excludedGroups = [];
+		if (is_array($data['afterpayExcludedGroups'])) {
+			$excludedGroups = $data['afterpayExcludedGroups'];
+		}
+		Config::save('community_store_afterpay.ExcludedGroups', $excludedGroups);
 
 		// Need to get the payment limits via API and store server side
 		$this->setPaymentLimits();
 
+	}
+
+
+	public function getName () {
+		return 'Afterpay';
+	}
+
+
+	public function isExternal () {
+		return true;
+	}
+
+
+	public function getPaymentMinimum() {
+		return Config::get('community_store_afterpay.minimumAmount');
+	}
+
+
+	public function getPaymentMaximum() {
+		return Config::get('community_store_afterpay.maximumAmount');
 	}
 
 
@@ -316,9 +377,21 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 
 
 	public function checkoutForm () {
-//		$this->set('currency', Config::get('community_store_stripe_checkout.currency')); TODO
 		$pmID = StorePaymentMethod::getByHandle('community_store_afterpay')->getID();
 		$this->set('pmID', $pmID);
+	}
+
+
+	private function getLangPath () {
+		$referrer = $this->request->server->get('HTTP_REFERER');;
+		$c = \Page::getByPath(parse_url($referrer, PHP_URL_PATH));
+		$al = Section::getBySectionOfSite($c);
+		$langpath = '';
+		if ($al !== null) {
+			$langpath = $al->getCollectionHandle();
+		}
+
+		return $langpath;
 	}
 
 

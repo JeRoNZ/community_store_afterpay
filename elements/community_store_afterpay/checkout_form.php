@@ -13,8 +13,6 @@ if (Config::get('community_store_afterpay.SandboxMode')) {
         $('.store-btn-complete-order').on('click', function (e) {
             // Open Checkout with further options
             var currentpmid = $('input[name="payment-method"]:checked:first').data('payment-method-id');
-            console.log(currentpmid);
-            console.log( <?= $pmID; ?>);
 
             if (currentpmid == <?= $pmID; ?>) {
                 $(this).prop('disabled', true);
@@ -41,6 +39,10 @@ if (Config::get('community_store_afterpay.SandboxMode')) {
                                         AfterPay.initialize({countryCode: '<?= Config::get('community_store_afterpay.MerchantCountry') ?>'});
                                         AfterPay.redirect({token: token});
                                     },
+                                    error: function(jqXHR){
+                                        alert(jqXHR.responseText);
+                                        window.location = window.location;
+                                    }
                                 });
 
                             }
