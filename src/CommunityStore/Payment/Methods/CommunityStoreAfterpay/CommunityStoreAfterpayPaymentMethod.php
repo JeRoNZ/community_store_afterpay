@@ -260,7 +260,6 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		$this->set('SandboxMerchantID', Config::get('community_store_afterpay.SandboxMerchantID'));
 		$this->set('SandboxMerchantSecretKey', Config::get('community_store_afterpay.SandboxMerchantSecretKey'));
 		$this->set('currency', Config::get('community_store_afterpay.currency'));
-		$this->set('MaxAttempts', Config::get('community_store_afterpay.MaxAttempts'));
 		$this->set('Debug', Config::get('community_store_afterpay.Debug'));
 		$this->set('MerchantCountry', Config::get('community_store_afterpay.MerchantCountry'));
 		$this->set('PaymentFlow', Config::get('community_store_afterpay.PaymentFlow'));
@@ -289,7 +288,6 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		Config::save('community_store_afterpay.LiveMerchantID', $data['afterpayLiveMerchantID']);
 		Config::save('community_store_afterpay.LiveMerchantSecretKey', $data['afterpayLiveMerchantSecretKey']);
 		Config::save('community_store_afterpay.SandboxMode', ($data['afterpaySandboxMode'] ? 1 : 0));
-		Config::save('community_store_afterpay.MaxAttempts', ($data['afterpayMaxAttempts'] ? (int) $data['afterpayMaxAttempts'] : 20));
 		Config::save('community_store_afterpay.MerchantCountry', ($data['afterpayMerchantCountry'] ?: 'auto'));
 		Config::save('community_store_afterpay.PaymentFlow', ($data['afterpayPaymentFlow'] ? 1 : 0));
 
