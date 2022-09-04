@@ -3,28 +3,11 @@ defined('C5_EXECUTE') or die(_('Access Denied.'));
 extract($vars);
 ?>
 
-
-<div class="row">
-    <div class="col-md-6">
-        <div class="form-group">
-			<?= $form->label('afterpaySandboxEndpointURL', t('Sandbox Endpoint URL')); ?>
-			<?= $form->text('afterpaySandboxEndpointURL', ($SandboxEndpointURL ? $SandboxEndpointURL : 'https://global-api-sandbox.afterpay.com')) ?>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="form-group">
-			<?= $form->label('afterpaySandboxMerchantID', t('Sandbox Merchant ID')); ?>
-			<?= $form->text('afterpaySandboxMerchantID', $SandboxMerchantID) ?>
-        </div>
-    </div>
-</div>
-
-
-<div class="form-group">
-	<?= $form->label('afterpaySandboxMerchantSecretKey', t('Sandbox Merchant Secret Key')); ?>
-	<?= $form->text('afterpaySandboxMerchantSecretKey', $SandboxMerchantSecretKey) ?>
-</div>
-
+<style>
+    .hidden {
+        display:none;
+    }
+</style>
 
 <div class="row">
     <div class="col-md-6">
@@ -42,25 +25,50 @@ extract($vars);
 </div>
 
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="form-group">
-			<?= $form->label('afterpayLiveEndpointURL', t('Live Endpoint URL')); ?>
-			<?= $form->text('afterpayLiveEndpointURL', ($LiveEndpointURL ? $LiveEndpointURL : 'https://global-api.afterpay.com')) ?>
+<div class="creds <?= $SandboxMode ? '' : 'hidden' ?>">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+				<?= $form->label('afterpaySandboxEndpointURL', t('Sandbox Endpoint URL')); ?>
+				<?= $form->text('afterpaySandboxEndpointURL', ($SandboxEndpointURL ? $SandboxEndpointURL : 'https://global-api-sandbox.afterpay.com')) ?>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+				<?= $form->label('afterpaySandboxMerchantID', t('Sandbox Merchant ID')); ?>
+				<?= $form->text('afterpaySandboxMerchantID', $SandboxMerchantID) ?>
+            </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="form-group">
-			<?= $form->label('afterpayLiveMerchantID', t('Live Merchant ID')); ?>
-			<?= $form->text('afterpayLiveMerchantID', $LiveMerchantID) ?>
-        </div>
+
+
+    <div class="form-group">
+		<?= $form->label('afterpaySandboxMerchantSecretKey', t('Sandbox Merchant Secret Key')); ?>
+		<?= $form->text('afterpaySandboxMerchantSecretKey', $SandboxMerchantSecretKey) ?>
     </div>
 </div>
 
+<div class="creds <?= $SandboxMode ? 'hidden' : '' ?>">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+				<?= $form->label('afterpayLiveEndpointURL', t('Live Endpoint URL')); ?>
+				<?= $form->text('afterpayLiveEndpointURL', ($LiveEndpointURL ? $LiveEndpointURL : 'https://global-api.afterpay.com')) ?>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+				<?= $form->label('afterpayLiveMerchantID', t('Live Merchant ID')); ?>
+				<?= $form->text('afterpayLiveMerchantID', $LiveMerchantID) ?>
+            </div>
+        </div>
+    </div>
 
-<div class="form-group">
-	<?= $form->label('afterpayLiveMerchantSecretKey', t('Live Merchant Secret Key')); ?>
-	<?= $form->text('afterpayLiveMerchantSecretKey', $LiveMerchantSecretKey) ?>
+
+    <div class="form-group">
+		<?= $form->label('afterpayLiveMerchantSecretKey', t('Live Merchant Secret Key')); ?>
+		<?= $form->text('afterpayLiveMerchantSecretKey', $LiveMerchantSecretKey) ?>
+    </div>
 </div>
 
 
@@ -104,5 +112,8 @@ extract($vars);
 <script>
     $(document).ready(function () {
         $('.afterpayExcludedGroups').select2();
+        $('#afterpaySandboxMode').change(function(){
+            $('.creds').toggleClass('hidden');
+        });
     });
 </script>
