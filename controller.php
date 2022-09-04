@@ -73,6 +73,7 @@ class Controller extends Package {
 			}
 			$view = View::getInstance();
 			$view->addHeaderItem('<link rel="dns-prefetch" href="' . $url . '">');
+			$view->addHeaderItem('<script src="https://js.afterpay.com/afterpay-1.x.js" data-analytics-enabled async></script>');
 		});
 
 		// Remove Afterpay as a payment method if the cart contains a product in one of the excluded groups
