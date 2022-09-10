@@ -69,8 +69,12 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 						/** @var Order $order */
 						$order = Order::getByID($orderID);
 						if ($order) {
-							$this->log(t('Completing payment for order %s paymentID %s', $orderID, $payment->id));
-							$order->completeOrder($payment->id);
+							if ($order->getTransactionReference()) {
+								$this->log(t('Not completing payment for order %s because paymentID is already set: %s', $orderID, $order->getTransactionReference()));
+							} else {
+								$this->log(t('Completing payment for order %s paymentID %s', $orderID, $payment->id));
+								$order->completeOrder($payment->id);
+							}
 
 							return new RedirectResponse($this->getLangPath() . '/checkout/complete');
 						}
