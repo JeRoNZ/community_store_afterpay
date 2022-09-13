@@ -285,7 +285,6 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		$this->set('SandboxEndpointURL', Config::get('community_store_afterpay.SandboxEndpointURL'));
 		$this->set('SandboxMerchantID', Config::get('community_store_afterpay.SandboxMerchantID'));
 		$this->set('SandboxMerchantSecretKey', Config::get('community_store_afterpay.SandboxMerchantSecretKey'));
-		$this->set('currency', Config::get('community_store_afterpay.currency'));
 		$this->set('Debug', Config::get('community_store_afterpay.Debug'));
 		$this->set('MerchantCountry', Config::get('community_store_afterpay.MerchantCountry'));
 		$this->set('PaymentFlow', Config::get('community_store_afterpay.PaymentFlow'));

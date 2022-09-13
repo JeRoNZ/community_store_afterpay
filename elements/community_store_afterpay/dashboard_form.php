@@ -78,10 +78,14 @@ extract($vars);
 			<?= $form->label('afterpayMerchantCountry', t('Merchant Country')); ?>
 			<?= $form->select('afterpayMerchantCountry',
 				[
-					'NZ' => 'New Zealand',
-					'AU' => 'Australia',
-					'CA' => 'Canada',
-					'US' => 'United States'
+					'NZ' => t('New Zealand'),
+					'AU' => t('Australia'),
+					'CA' => t('Canada'),
+					'US' => t('United States'),
+					'UK' => t('United Kingdom'),
+					'FR' => t('France'),
+					'ES' => t('Spain'),
+					'IT' => t('Italy'),
 				], $MerchantCountry) ?>
         </div>
     </div>

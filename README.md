@@ -1,5 +1,5 @@
-# Community Store Afterpay
-Afterpay payments for Community Store for concrete5 / Concrete CMS
+# Community Store Afterpay/Clearpay
+Afterpay/Clearpay payments for Community Store for concrete5 / Concrete CMS
 
 Install [Community Store](https://github.com/concrete5-community-store/community_store) First.
 
