@@ -63,8 +63,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 				$json = $response->getBody()->getContents();
 				$payment = json_decode($json);
 				if ($payment->status === 'APPROVED') {
-					// WEB000001
-					$orderID = (int) substr($payment->merchantReference, 3);
+					$orderID = (int) $payment->merchantReference;
 					if ($orderID) {
 						/** @var Order $order */
 						$order = Order::getByID($orderID);
@@ -197,7 +196,10 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 				'line2' => substr($customer->getValue('shipping_address')->address2, 0, 128),
 				'area1' => substr($customer->getValue('shipping_address')->city, 0, 128),
 				'region' => substr($customer->getValue('shipping_address')->state_province, 0, 128),
-				'postcode' => substr($customer->getValue('shipping_address')->postal_code, 0, 128)
+				'postcode' => substr($customer->getValue('shipping_address')->postal_code, 0, 128),
+				// https://developers.afterpay.com/afterpay-online/reference/create-checkout-1
+				// The two-character ISO 3166-1 country code.
+				'countryCode' => $customer->getValue('shipping_address')->country
 			];
 
 			$billing = [
@@ -206,7 +208,8 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 				'line2' => substr($customer->getValue('billing_address')->address2, 0, 128),
 				'area1' => substr($customer->getValue('billing_address')->city, 0, 128),
 				'region' => substr($customer->getValue('billing_address')->state_province, 0, 128),
-				'postcode' => substr($customer->getValue('billing_address')->postal_code, 0, 128)
+				'postcode' => substr($customer->getValue('billing_address')->postal_code, 0, 128),
+				'countryCode' => $customer->getValue('billing_address')->country,
 			];
 
 			$merchant = [
@@ -229,7 +232,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 				'billing' => $billing,
 				'shipping' => $shipping,
 				'merchant' => $merchant,
-				'merchantReference' => 'WEB' . sprintf('%06d', $order->getOrderID()),
+				'merchantReference' => (int) $order->getOrderID(),
 				'taxAmount' => ['amount' => number_format($taxAmount, 2, '.', ''), 'currency' => $currency],
 				'shippingAmount' => ['amount' => number_format($shippingAmount, 2, '.', ''), 'currency' => $currency],
 			];
