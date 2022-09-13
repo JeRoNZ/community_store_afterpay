@@ -110,10 +110,23 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 	public function createSession () {
 		// fetch order just submitted
 		/** @var Order $order */
-		$order = StoreOrder::getByID(Session::get('orderID'));
+		$orderID = Session::get('orderID');
+
+		$error = new ErrorList();
+		try {
+			$order = StoreOrder::getByID($orderID);
+		} catch (\Exception $e){
+			$this->log(t('Error retrieving order %s, %s', var_export($orderID, true), $e->getMessage()), true);
+
+			$error->add(t("An error occurred initiating your payment.\nYour order was not found"));
+			$this->flash('error', $error);
+
+			return new Response(t("An error occurred initiating your payment.\nYour order was not found"), 500);
+		}
 		$currency = Config::get('community_store_afterpay.currency');
 
 		if ($order) {
+			$this->log(t('Generating afterpay payload for orderID %s', $orderID));
 			$goodsTotal = 0;
 			$orderItems = [];
 			/** @var OrderItem[] $items */
@@ -150,6 +163,12 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 						]
 					];
 				}
+			} else {
+				$this->log(t('No items found on orderID %s', $orderID), true);
+				$error->add('Your cart is empty');
+				$this->flash('error', $error);
+
+				return new Response(t('Your cart is empty'), 401);
 			}
 
 			$shippingAmount = 0;
@@ -216,7 +235,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			];
 
 			$body = json_encode($data);
-			$this->log(t('Requesting afterpay token with payload %s', $body));
+			$this->log(t('Requesting afterpay token for orderID %s with payload %s', $orderID, $body));
 
 			$client = new Client();
 			try {
@@ -234,7 +253,6 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			} catch (\Exception $e) {
 				$this->log($e->getMessage(), true);
 
-				$error = new ErrorList();
 				$error->add(t('An error occurred initiating your payment. Please try another payment method'));
 				$this->flash('error', $error);
 
@@ -242,9 +260,10 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			}
 		}
 
-		$error = new ErrorList();
+		$this->log(t('Could not find an order for the session id %s', var_export($orderID, true)), true);
 		$error->add('Error - no order found');
 		$this->flash('error', $error);
+
 		return new Response(t('Error - no order found'), 401);
 	}
 
