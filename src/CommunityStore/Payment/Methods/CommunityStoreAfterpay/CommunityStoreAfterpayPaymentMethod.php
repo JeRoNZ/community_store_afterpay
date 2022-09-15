@@ -322,8 +322,11 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		}
 		Config::save('community_store_afterpay.ExcludedGroups', $excludedGroups);
 
+		$pmID = array_search('community_store_afterpay', $data['paymentMethodHandle']);
 		// Need to get the payment limits via API and store server side
-		$this->setPaymentLimits();
+		if ($data['paymentMethodEnabled'][$pmID] === '1') {
+			$this->setPaymentLimits();
+		}
 
 	}
 
