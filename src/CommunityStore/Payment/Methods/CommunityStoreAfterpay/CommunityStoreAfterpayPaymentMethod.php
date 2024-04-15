@@ -278,7 +278,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 
 
 	public function dashboardForm () {
-		$this->set('LivetEndpointURL', Config::get('community_store_afterpay.LiveEndpointURL'));
+		$this->set('LiveEndpointURL', Config::get('community_store_afterpay.LiveEndpointURL'));
 		$this->set('LiveMerchantID', Config::get('community_store_afterpay.LiveMerchantID'));
 		$this->set('LiveMerchantSecretKey', Config::get('community_store_afterpay.LiveMerchantSecretKey'));
 		$this->set('SandboxMode', Config::get('community_store_afterpay.SandboxMode'));
@@ -291,6 +291,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 
 		$grouplist = StoreGroupList::getGroupList();
 		$this->set('grouplist', $grouplist);
+		$productgroups = [];
 		foreach ($grouplist as $productgroup) {
 			$productgroups[$productgroup->getGroupID()] = $productgroup->getGroupName();
 		}
