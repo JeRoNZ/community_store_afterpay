@@ -309,11 +309,13 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		Config::save('community_store_afterpay.SandboxEndpointURL', $data['afterpaySandboxEndpointURL']);
 		Config::save('community_store_afterpay.SandboxMerchantID', $data['afterpaySandboxMerchantID']);
 		Config::save('community_store_afterpay.SandboxMerchantSecretKey', $data['afterpaySandboxMerchantSecretKey']);
-		Config::save('community_store_afterpay.Debug', ($data['afterpayDebug'] ? 1 : 0));
+		$debug = isset($data['afterpayDebug']) ? ($data['afterpayDebug'] ? 1 : 0)) : 0;
+		Config::save('community_store_afterpay.Debug', $debug);
 		Config::save('community_store_afterpay.LiveEndpointURL', $data['afterpayLiveEndpointURL']);
 		Config::save('community_store_afterpay.LiveMerchantID', $data['afterpayLiveMerchantID']);
 		Config::save('community_store_afterpay.LiveMerchantSecretKey', $data['afterpayLiveMerchantSecretKey']);
-		Config::save('community_store_afterpay.SandboxMode', ($data['afterpaySandboxMode'] ? 1 : 0));
+		$sandbox = isset($data['afterpaySandboxMode']) ? ($data['afterpaySandboxMode'] ? 1 : 0)) : 0;
+		Config::save('community_store_afterpay.SandboxMode', $sandbox);
 		Config::save('community_store_afterpay.MerchantCountry', ($data['afterpayMerchantCountry'] ?: 'auto'));
 		Config::save('community_store_afterpay.PaymentFlow', ($data['afterpayPaymentFlow'] ? 1 : 0));
 
