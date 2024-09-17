@@ -375,7 +375,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 	public function validate ($args, $e) {
 		$pm = StorePaymentMethod::getByHandle('community_store_afterpay');
 		if ($args['paymentMethodEnabled'][$pm->getID()] == 1) {
-			if ($args['afterpaySandboxMode']) {
+			if (isset($args['afterpaySandboxMode'])) {
 				if ($args['afterpaySandboxMerchantID'] === '') {
 					$e->add(t('Sandbox Merchant ID must be set'));
 				}
