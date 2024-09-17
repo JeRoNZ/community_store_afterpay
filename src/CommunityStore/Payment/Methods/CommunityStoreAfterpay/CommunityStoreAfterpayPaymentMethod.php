@@ -320,7 +320,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 		Config::save('community_store_afterpay.PaymentFlow', ($data['afterpayPaymentFlow'] ? 1 : 0));
 
 		$excludedGroups = [];
-		if (is_array($data['afterpayExcludedGroups'])) {
+		if (isset($data['afterpayExcludedGroups']) && is_array($data['afterpayExcludedGroups'])) {
 			$excludedGroups = $data['afterpayExcludedGroups'];
 		}
 		Config::save('community_store_afterpay.ExcludedGroups', $excludedGroups);
