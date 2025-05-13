@@ -16,3 +16,5 @@ To show the Afterpay widget on your product pages you will need to modify your p
 ```
 
 The required JavaScript is loaded by the package controller.
+
+**Make sure that your site's locale is set correctly in the dashboard, otherwise the wrong promotional messaging will be used**

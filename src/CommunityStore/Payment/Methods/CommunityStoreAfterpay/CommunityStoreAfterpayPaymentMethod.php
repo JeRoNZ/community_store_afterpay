@@ -128,6 +128,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 			$this->log(t('Generating afterpay payload for orderID %s', $orderID));
 			$goodsTotal = 0;
 			$orderItems = [];
+			$grandTotal = $order->getTotal();
 			/** @var OrderItem[] $items */
 			$items = $order->getOrderItems();
 			if ($items) {
@@ -227,7 +228,7 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 
 			$data = [
 				'items' => $orderItems,
-				'amount' => ['amount' => number_format($goodsTotal, 2, '.', ''), 'currency' => $currency],
+				'amount' => ['amount' => number_format($grandTotal, 2, '.', ''), 'currency' => $currency],
 				'consumer' => $consumer,
 				'billing' => $billing,
 				'shipping' => $shipping,
