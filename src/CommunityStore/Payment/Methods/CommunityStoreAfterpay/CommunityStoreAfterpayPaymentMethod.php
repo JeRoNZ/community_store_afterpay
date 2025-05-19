@@ -249,6 +249,8 @@ class CommunityStoreAfterpayPaymentMethod extends StorePaymentMethod {
 				]);
 				$json = $response->getBody()->getContents();
 
+				$this->log(t('Received token response for orderID %s with payload %s', $orderID, $json));
+
 				$payload = json_decode($json);
 				$token = $payload->token;
 

@@ -17,7 +17,7 @@ use \Concrete\Package\CommunityStore\Src\CommunityStore\Payment\Method as Paymen
 class Controller extends Package {
 	protected $pkgHandle = 'community_store_afterpay';
 	protected $appVersionRequired = '8.5.0';
-	protected $pkgVersion = '1.0.2';
+	protected $pkgVersion = '1.0.3';
 
 	protected $pkgAutoloaderRegistries = [
 		'src/CommunityStore' => '\Concrete\Package\CommunityStoreAfterpay\Src\CommunityStore'
